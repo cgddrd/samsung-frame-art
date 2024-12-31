@@ -1,0 +1,4 @@
+git+https://github.com/NickWaterton/samsung-tv-ws-api.git#egg=samsungtvws[async,encrypted]
+wakeonlan
+requests
+pillow
