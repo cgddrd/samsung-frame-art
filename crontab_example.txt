@@ -1,0 +1,1 @@
+0 6,8,10,12,14,16,18,20 * * * cd /home/user/samsung-frame-art && chmod +x ./run.sh && /bin/bash ./run.sh --ip XXX --mac YYY --unsplash-api-key ZZZ
