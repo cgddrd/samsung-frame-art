@@ -11,9 +11,28 @@ import random
 import shutil
 import io
 from PIL import Image, ImageStat
+from datetime import datetime
 
 sys.path.append("../")
 from samsungtvws import SamsungTVWS
+
+def is_birthday():
+    BIRTHDAY_DATES = [
+        (5, 7),  # July 5th
+        (6, 6)   # June 6th
+    ]
+
+    today = datetime.now()
+
+    return any((today.day == day and today.month == month) for day, month in BIRTHDAY_DATES)
+
+def is_christmas():
+    today = datetime.now()
+    return today.month == 12 and (today.day >= 22 or today.day <= 31)
+
+def is_new_year():
+    today = datetime.now()
+    return today.month == 1 and today.day == 1
 
 def is_image_dark(image_path):
     """
@@ -38,16 +57,13 @@ def is_artwork_display_possible(tv):
     return tv.on() and is_artmode_active(tv)
 
 
-def download_random_landscape_images(dir, image_size):
+def download_random_landscape_images(dir, image_size, collections):
     # Delete the directory if it exists
     if os.path.exists(dir):
         shutil.rmtree(dir)
     
     # Recreate the directory
     os.makedirs(dir)
-
-    # https://unsplash.com/@susan_wilkinson
-    collections = ["8262542", "879220", "1976117", "2027881", "4494328", "1887125", "32519533"]
 
     url = "https://api.unsplash.com/photos/random"
     headers = {
@@ -112,6 +128,15 @@ SELECTED_MATTE = "none"
 MATTE_TYPE="modernthin"
 LIGHT_MODE_MATTE = f"{MATTE_TYPE}_warm"
 DARK_MODE_MATTE = "none"
+DOWNLOAD_FOLDER_PATH = './downloaded'
+LOCAL_FRAMEART_FOLDER_PATH = './frameart'
+DOWNLOAD_IMAGE_SIZE = 'full'
+
+# https://unsplash.com/@susan_wilkinson
+UNSPLASH_NORMAL_COLLECTIONS = ["8262542", "879220", "1976117", "2027881", "4494328", "1887125", "32519533"]
+UNSPLASH_CHRISTMAS_COLLECTIONS = ["10913795"]
+UNSPLASH_NEW_YEAR_COLLECTIONS = ["21719161"]
+UNSPLASH_BIRTHDAY_COLLECTIONS = ["11830370"]
 
 # Add command line argument parsing
 parser = argparse.ArgumentParser(description="Upload images to Samsung TV.")
@@ -135,12 +160,29 @@ TV_IP = args.ip
 TV_MAC = args.mac
 
 rand_no = random.random() 
-if rand_no < 0.5:
-    folder_path = './downloaded'
-    download_random_landscape_images(folder_path, image_size='full')
+
+# If it's a special day, download images from Unsplash
+if is_birthday():
+    print("It's a birthday!")
+    folder_path = DOWNLOAD_FOLDER_PATH
+    download_random_landscape_images(folder_path, image_size=DOWNLOAD_IMAGE_SIZE, collections=UNSPLASH_BIRTHDAY_COLLECTIONS)
+elif is_christmas():
+    print("It's Christmas!")
+    folder_path = DOWNLOAD_FOLDER_PATH
+    download_random_landscape_images(folder_path, image_size=DOWNLOAD_IMAGE_SIZE, collections=UNSPLASH_CHRISTMAS_COLLECTIONS)
+elif is_new_year():
+    print("It's New Year!")
+    folder_path = DOWNLOAD_FOLDER_PATH
+    download_random_landscape_images(folder_path, image_size=DOWNLOAD_IMAGE_SIZE, collections=UNSPLASH_NEW_YEAR_COLLECTIONS)
+
+# If it's not a special day, randomly decide whether to download images from Unsplash or use local frameart folder
+elif rand_no <= 0.5:
+    print("Downloading images from Unsplash")
+    folder_path = DOWNLOAD_FOLDER_PATH
+    download_random_landscape_images(folder_path, image_size=DOWNLOAD_IMAGE_SIZE, collections=UNSPLASH_NORMAL_COLLECTIONS)
 else:
-    # Set the path to the folder containing the images
-    folder_path = "./frameart"
+    print("Using local frameart folder")
+    folder_path = LOCAL_FRAMEART_FOLDER_PATH
 
 # Set the path to the file that will store the list of uploaded filenames
 upload_list_path = "./uploaded_files.json"
