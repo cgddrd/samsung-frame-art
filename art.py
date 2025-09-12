@@ -42,7 +42,7 @@ def is_image_dark(image_path):
     image = Image.open(image_path).convert("L")  # Convert to grayscale
     stat = ImageStat.Stat(image)
     average_brightness = stat.mean[0]  # Get the average brightness (0-255)
-    return average_brightness < 85  # Threshold for darkness (127 is midway in 0-255)
+    return average_brightness < 85  # Threshold for darkness
 
 def set_image_on_tv(tv, remote_filename):
     show_image = is_artwork_display_possible(tv)
@@ -126,11 +126,13 @@ def download_random_landscape_images(dir, image_size, collections):
 
 SELECTED_MATTE = "none"
 MATTE_TYPE="modernthin"
-LIGHT_MODE_MATTE = f"{MATTE_TYPE}_warm"
+# LIGHT_MODE_MATTE = f"{MATTE_TYPE}_warm"
+LIGHT_MODE_MATTE = "none"
 DARK_MODE_MATTE = "none"
 DOWNLOAD_FOLDER_PATH = './downloaded'
 LOCAL_FRAMEART_FOLDER_PATH = './frameart'
 DOWNLOAD_IMAGE_SIZE = 'full'
+CHANCE_OF_USING_UNSPLASH = 0.1
 
 # https://unsplash.com/@susan_wilkinson
 UNSPLASH_NORMAL_COLLECTIONS = ["8262542", "879220", "1976117", "2027881", "4494328", "1887125", "32519533"]
@@ -176,7 +178,7 @@ elif is_new_year():
     download_random_landscape_images(folder_path, image_size=DOWNLOAD_IMAGE_SIZE, collections=UNSPLASH_NEW_YEAR_COLLECTIONS)
 
 # If it's not a special day, randomly decide whether to download images from Unsplash or use local frameart folder
-elif rand_no <= 0.5:
+elif rand_no <= CHANCE_OF_USING_UNSPLASH:
     print("Downloading images from Unsplash")
     folder_path = DOWNLOAD_FOLDER_PATH
     download_random_landscape_images(folder_path, image_size=DOWNLOAD_IMAGE_SIZE, collections=UNSPLASH_NORMAL_COLLECTIONS)
