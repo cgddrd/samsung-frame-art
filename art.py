@@ -30,6 +30,10 @@ def is_christmas():
     today = datetime.now()
     return today.month == 12 and (today.day >= 22 or today.day <= 31)
 
+def is_halloween():
+    today = datetime.now()
+    return today.month == 10 and today.day == 31
+
 def is_new_year():
     today = datetime.now()
     return today.month == 1 and today.day == 1
@@ -130,9 +134,9 @@ MATTE_TYPE="modernthin"
 LIGHT_MODE_MATTE = "none"
 DARK_MODE_MATTE = "none"
 DOWNLOAD_FOLDER_PATH = './downloaded'
-LOCAL_FRAMEART_FOLDER_PATH = './frameart'
+LOCAL_FRAMEART_FOLDER_PATH = './frameart/new'
 DOWNLOAD_IMAGE_SIZE = 'full'
-CHANCE_OF_USING_UNSPLASH = 0.1
+CHANCE_OF_USING_UNSPLASH = 0.01
 
 # https://unsplash.com/@susan_wilkinson
 UNSPLASH_NORMAL_COLLECTIONS = ["8262542", "879220", "1976117", "2027881", "4494328", "1887125", "32519533"]
@@ -170,8 +174,23 @@ if is_birthday():
     download_random_landscape_images(folder_path, image_size=DOWNLOAD_IMAGE_SIZE, collections=UNSPLASH_BIRTHDAY_COLLECTIONS)
 elif is_christmas():
     print("It's Christmas!")
-    folder_path = DOWNLOAD_FOLDER_PATH
-    download_random_landscape_images(folder_path, image_size=DOWNLOAD_IMAGE_SIZE, collections=UNSPLASH_CHRISTMAS_COLLECTIONS)
+    folder_path = os.path.join(LOCAL_FRAMEART_FOLDER_PATH, "xmas")
+    # Check if Christmas folder exists and has images
+    if os.path.exists(folder_path) and any(f.endswith(('.jpg', '.jpeg', '.png')) for f in os.listdir(folder_path)):
+        print("Using local Christmas images")
+    else:
+        print("Christmas folder empty or missing, downloading from Unsplash")
+        folder_path = DOWNLOAD_FOLDER_PATH
+        download_random_landscape_images(folder_path, image_size=DOWNLOAD_IMAGE_SIZE, collections=UNSPLASH_CHRISTMAS_COLLECTIONS)
+elif is_halloween():
+    print("It's Halloween!")
+    folder_path = os.path.join(LOCAL_FRAMEART_FOLDER_PATH, "halloween")
+    # Check if Halloween folder exists and has images
+    if os.path.exists(folder_path) and any(f.endswith(('.jpg', '.jpeg', '.png')) for f in os.listdir(folder_path)):
+        print("Using local Halloween images")
+    else:
+        print("Halloween folder empty or missing, using regular local images")
+        folder_path = LOCAL_FRAMEART_FOLDER_PATH
 elif is_new_year():
     print("It's New Year!")
     folder_path = DOWNLOAD_FOLDER_PATH
