@@ -19,8 +19,8 @@ from samsungtvws import SamsungTVWS
 def is_birthday():
     BIRTHDAY_DATES = [
         (5, 7),  # July 5th
-        (6, 6)   # June 6th
-        (18, 11)   # November 18th (Elwyn's birthday)
+        (6, 6),   # June 6th
+        (18, 11),   # November 18th (Elwyn's birthday)
     ]
 
     today = datetime.now()
@@ -231,7 +231,7 @@ elif is_winter():
             print("Winter folder empty or missing, using regular local images")
             folder_path = LOCAL_FRAMEART_FOLDER_PATH
     else:
-        print("Using regular local images (35% chance)")
+        print("Using regular local images")
         folder_path = LOCAL_FRAMEART_FOLDER_PATH
 # If it's not a special day, randomly decide whether to download images from Unsplash or use local frameart folder
 elif rand_no <= CHANCE_OF_USING_UNSPLASH:

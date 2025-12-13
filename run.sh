@@ -1,19 +1,17 @@
 #!/bin/bash
 
-VENV_NAME=".env"
+VENV_NAME=".venv"
 REQUIREMENTS_FILE="requirements.txt"
 
-# Create a virtual environment
-echo "Creating virtual environment: $VENV_NAME..."
-python3 -m venv "$VENV_NAME"
+# Create virtual environment if it doesn't exist
+if [ ! -d "$VENV_NAME" ]; then
+    echo "Creating virtual environment: $VENV_NAME..."
+    uv venv "$VENV_NAME"
+fi
 
-# Activate the virtual environment
-echo "Activating virtual environment..."
-source "$VENV_NAME/bin/activate"
-
-# Install dependencies
-echo "Installing dependencies..."
-pip install -r "$REQUIREMENTS_FILE"
+# Install dependencies using uv (specify the venv's python)
+echo "Installing dependencies with uv..."
+uv pip install --python "$VENV_NAME/bin/python" -r "$REQUIREMENTS_FILE"
 
 echo "Running art.py with arguments: $@"
-python3 art.py "$@"
+uv run python3 art.py "$@"
