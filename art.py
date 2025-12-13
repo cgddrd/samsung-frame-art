@@ -20,6 +20,7 @@ def is_birthday():
     BIRTHDAY_DATES = [
         (5, 7),  # July 5th
         (6, 6)   # June 6th
+        (18, 11)   # November 18th (Elwyn's birthday)
     ]
 
     today = datetime.now()
