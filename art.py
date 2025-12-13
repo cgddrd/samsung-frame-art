@@ -28,7 +28,7 @@ def is_birthday():
 
 def is_christmas():
     today = datetime.now()
-    return today.month == 12 and (today.day >= 22 or today.day <= 31)
+    return today.month == 12 and (today.day >= 24 and today.day <= 26)
 
 def is_halloween():
     today = datetime.now()
@@ -37,6 +37,27 @@ def is_halloween():
 def is_new_year():
     today = datetime.now()
     return today.month == 1 and today.day == 1
+
+def is_winter():
+    """
+    Check if the current date is in winter season (December 1st to January 31st).
+    Excludes Christmas (Dec 24-26) and New Year (Jan 1) as those are handled separately.
+    """
+    # If it's Christmas or New Year, it's not winter (those take priority)
+    if is_christmas() or is_new_year():
+        return False
+    
+    today = datetime.now()
+    
+    # December 1st to December 31st
+    if today.month == 12 and today.day >= 1 and today.day <= 31:
+        return True
+    
+    # January 1st to January 31st
+    if today.month == 1 and today.day >= 1 and today.day <= 31:
+        return True
+    
+    return False
 
 def is_image_dark(image_path):
     """
@@ -195,7 +216,22 @@ elif is_new_year():
     print("It's New Year!")
     folder_path = DOWNLOAD_FOLDER_PATH
     download_random_landscape_images(folder_path, image_size=DOWNLOAD_IMAGE_SIZE, collections=UNSPLASH_NEW_YEAR_COLLECTIONS)
-
+elif is_winter():
+    print("It's winter season!")
+    # 65% chance to use winter folder, 35% chance to use regular folder
+    winter_rand = random.random()
+    if winter_rand <= 0.65:
+        winter_folder = os.path.join(LOCAL_FRAMEART_FOLDER_PATH, "winter")
+        # Check if winter folder exists and has images
+        if os.path.exists(winter_folder) and any(f.endswith(('.jpg', '.jpeg', '.png')) for f in os.listdir(winter_folder)):
+            print("Using local winter images")
+            folder_path = winter_folder
+        else:
+            print("Winter folder empty or missing, using regular local images")
+            folder_path = LOCAL_FRAMEART_FOLDER_PATH
+    else:
+        print("Using regular local images (35% chance)")
+        folder_path = LOCAL_FRAMEART_FOLDER_PATH
 # If it's not a special day, randomly decide whether to download images from Unsplash or use local frameart folder
 elif rand_no <= CHANCE_OF_USING_UNSPLASH:
     print("Downloading images from Unsplash")
