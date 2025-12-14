@@ -187,6 +187,11 @@ UNSPLASH_API_KEY = args.unsplash_api_key
 TV_IP = args.ip
 TV_MAC = args.mac
 
+# Record start time for runtime tracking
+script_start_time = time.time()
+start_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+print(f"Script started at {start_datetime}")
+
 rand_no = random.random() 
 
 # If it's a special day, download images from Unsplash
@@ -219,9 +224,8 @@ elif is_new_year():
     download_random_landscape_images(folder_path, image_size=DOWNLOAD_IMAGE_SIZE, collections=UNSPLASH_NEW_YEAR_COLLECTIONS)
 elif is_winter():
     print("It's winter season!")
-    # 65% chance to use winter folder, 35% chance to use regular folder
     winter_rand = random.random()
-    if winter_rand <= 0.65:
+    if winter_rand <= 0.55:
         winter_folder = os.path.join(LOCAL_FRAMEART_FOLDER_PATH, "winter")
         # Check if winter folder exists and has images
         if os.path.exists(winter_folder) and any(f.endswith(('.jpg', '.jpeg', '.png')) for f in os.listdir(winter_folder)):
@@ -347,3 +351,12 @@ if art_mode:
             json.dump(uploaded_files, f)
 else:
     logging.warning("Your TV does not support art mode.")
+
+# Calculate and print runtime
+script_end_time = time.time()
+end_datetime = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+runtime_seconds = script_end_time - script_start_time
+runtime_minutes = int(runtime_seconds // 60)
+runtime_secs = int(runtime_seconds % 60)
+print(f"Script ended at {end_datetime}")
+print(f"Script completed in {runtime_minutes}m {runtime_secs}s ({runtime_seconds:.2f} seconds total)")
