@@ -75,6 +75,51 @@ def set_image_on_tv(tv, remote_filename):
     tv.art().select_image(remote_filename, show=show_image)
 
 
+def _my_photo_sort_key(content_id):
+    """Sort MY_F#### ids numerically so lower numbers are treated as older."""
+    try:
+        return int(str(content_id).replace("MY_F", ""))
+    except (TypeError, ValueError):
+        return 0
+
+
+def prune_tv_art(tv, uploaded_files, keep=None):
+    """
+    Delete oldest My Photos until at most `keep - 1` remain, leaving room for
+    one new upload. Also drop matching entries from the local upload tracker.
+    """
+    if keep is None:
+        keep = MAX_STORED_IMAGES
+    art = tv.art()
+    try:
+        content = art.available(category=MY_PHOTOS_CATEGORY) or []
+        if len(content) < keep:
+            print(f"TV My Photos count {len(content)} is under cap {keep}; no prune needed.")
+            return uploaded_files
+
+        content_sorted = sorted(content, key=lambda c: _my_photo_sort_key(c.get("content_id")))
+        to_remove_count = len(content) - keep + 1
+        to_delete = [c["content_id"] for c in content_sorted[:to_remove_count]]
+        print(f"Pruning {len(to_delete)} oldest My Photos (have {len(content)}, cap {keep}).")
+
+        for i in range(0, len(to_delete), DELETE_BATCH_SIZE):
+            batch = to_delete[i:i + DELETE_BATCH_SIZE]
+            art.delete_list(batch)
+            print(f"Deleted prune batch of {len(batch)} images.")
+
+        deleted = set(to_delete)
+        uploaded_files = [
+            entry for entry in uploaded_files
+            if entry.get("remote_filename") not in deleted
+        ]
+        return uploaded_files
+    finally:
+        try:
+            art.close()
+        except Exception:
+            pass
+
+
 def is_artmode_active(tv):
     return tv.art().get_artmode() == "on"
 
@@ -159,6 +204,11 @@ DOWNLOAD_FOLDER_PATH = './downloaded'
 LOCAL_FRAMEART_FOLDER_PATH = './frameart/new'
 DOWNLOAD_IMAGE_SIZE = 'full'
 CHANCE_OF_USING_UNSPLASH = 0.01
+# Cap My Photos on the TV so full-size 4K uploads do not fill storage again.
+# The Frame has very limited art storage; ~100 full-res images is a safe ceiling.
+MAX_STORED_IMAGES = 100
+MY_PHOTOS_CATEGORY = "MY-C0002"
+DELETE_BATCH_SIZE = 50
 
 # https://unsplash.com/@susan_wilkinson
 UNSPLASH_NORMAL_COLLECTIONS = ["8262542", "879220", "1976117", "2027881", "4494328", "1887125", "32519533"]
@@ -199,6 +249,9 @@ if is_birthday():
     print("It's a birthday!")
     folder_path = DOWNLOAD_FOLDER_PATH
     download_random_landscape_images(folder_path, image_size=DOWNLOAD_IMAGE_SIZE, collections=UNSPLASH_BIRTHDAY_COLLECTIONS)
+    if not (os.path.exists(folder_path) and any(f.endswith(('.jpg', '.jpeg', '.png')) for f in os.listdir(folder_path))):
+        print("Birthday download failed or empty, using regular local images")
+        folder_path = LOCAL_FRAMEART_FOLDER_PATH
 elif is_christmas():
     print("It's Christmas!")
     folder_path = os.path.join(LOCAL_FRAMEART_FOLDER_PATH, "xmas")
@@ -222,6 +275,9 @@ elif is_new_year():
     print("It's New Year!")
     folder_path = DOWNLOAD_FOLDER_PATH
     download_random_landscape_images(folder_path, image_size=DOWNLOAD_IMAGE_SIZE, collections=UNSPLASH_NEW_YEAR_COLLECTIONS)
+    if not (os.path.exists(folder_path) and any(f.endswith(('.jpg', '.jpeg', '.png')) for f in os.listdir(folder_path))):
+        print("New Year download failed or empty, using regular local images")
+        folder_path = LOCAL_FRAMEART_FOLDER_PATH
 elif is_winter():
     print("It's winter season!")
     winter_rand = random.random()
@@ -260,13 +316,28 @@ else:
 print("Waking up TV.")
 wakeonlan.send_magic_packet(TV_MAC)
 
-print("Waiting 10 secs...")
-time.sleep(10)
-
 # Set your TV's local IP address. Highly recommend using a static IP address for your TV.
 tv = SamsungTVWS(TV_IP)
 
-print(tv.rest_device_info())
+# A cold-off TV can take longer than a single fixed wait to finish booting, so retry
+# rather than crashing the whole run on the first failed connection attempt.
+MAX_WAKE_ATTEMPTS = 6
+WAKE_RETRY_DELAY_SECONDS = 10
+
+device_info = None
+for attempt in range(1, MAX_WAKE_ATTEMPTS + 1):
+    print(f"Waiting {WAKE_RETRY_DELAY_SECONDS} secs for TV to wake (attempt {attempt}/{MAX_WAKE_ATTEMPTS})...")
+    time.sleep(WAKE_RETRY_DELAY_SECONDS)
+    try:
+        device_info = tv.rest_device_info()
+        print(device_info)
+        break
+    except Exception as e:
+        print(f"TV not reachable yet: {e}")
+
+if device_info is None:
+    logging.error(f"Could not reach the TV at {TV_IP} after {MAX_WAKE_ATTEMPTS * WAKE_RETRY_DELAY_SECONDS} seconds.")
+    sys.exit(1)
 
 print(tv.art().get_matte_list())
 
@@ -290,11 +361,10 @@ if art_mode:
     # Retrieve information about the currently selected art
     current_art = tv.art().get_current()
 
-    # Get a list of JPG/PNG files in the folder (including subdirectories if applicable)
+    # Get a list of JPG/PNG files directly in the folder, excluding seasonal subfolders
     files = [
-        os.path.join(root, f)
-        for root, _, filenames in os.walk(folder_path)
-        for f in filenames
+        os.path.join(folder_path, f)
+        for f in os.listdir(folder_path)
         if f.endswith((".jpg", ".jpeg", ".png"))
     ]
 
@@ -323,6 +393,7 @@ if art_mode:
         print(remote_filename)
         if remote_filename is None:
             print("Uploading new image: " + str(file))
+            uploaded_files = prune_tv_art(tv, uploaded_files, keep=MAX_STORED_IMAGES)
             try:
                 if file.endswith((".jpg", ".jpeg")):
                     remote_filename = tv.art().upload(
@@ -334,7 +405,7 @@ if art_mode:
                     )
             except Exception as e:
                 logging.error("There was an error: " + str(e))
-                sys.exit()
+                sys.exit(1)
 
             # Add the file to the uploaded list
             uploaded_files.append({"file": file, "remote_filename": remote_filename})
